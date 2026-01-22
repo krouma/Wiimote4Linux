@@ -1,4 +1,5 @@
 hid
 pyautogui
 pyqt5
-#alsaaudio
+wayland_automation
+# alsaaudio

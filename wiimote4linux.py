@@ -50,19 +50,19 @@ class LaserPointerDot(QMainWindow):
 			| Qt.CustomizeWindowHint | Qt.Tool # no taskbar entry
 		)
 		self.setAttribute(Qt.WA_TranslucentBackground)
-		self.resize(23, 23)
-		self.setWindowTitle('')
+		self.setWindowTitle('WiiPointer')
 
 	def paintEvent(self, event):
 		painter = QPainter(self)
 		painter.setPen(QPen(Qt.white, 2, Qt.SolidLine))
 		painter.setBrush(QBrush(Qt.red, Qt.SolidPattern))
-		painter.drawEllipse(2, 2, 20, 20)
+		painter.drawEllipse(self.position[0], self.position[1], 30, 30)
 
 	def moveRel(self, x, y):
-		self.position[0] += x
-		self.position[1] += y
-		self.move(self.position[0], self.position[1])
+		self.position[0] -= x
+		self.position[1] -= y
+		# self.move(self.position[0], self.position[1])
+		self.repaint()
 
 class CalibrationWindow(QDialog):
 	DOT_SIZE = 10

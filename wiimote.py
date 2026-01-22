@@ -4,10 +4,11 @@
 import threading
 import hid
 import struct
-import pyautogui
+from wayland_automation.mouse_controller import Mouse
+from wayland_automation.keyboard_controller import Keyboard
 import configparser
 from pathlib import Path
-import alsaaudio
+# import alsaaudio
 import traceback
 
 from warper import warper
@@ -216,7 +217,8 @@ class Controller:
 
 		self.calibrationPoints = []
 
-		pyautogui.PAUSE = 0
+		self.mouse = Mouse()
+		self.keyboard = Keyboard()
 
 	def start(self, screenWidth, screenHeight):
 		self.screenWidth = screenWidth
@@ -339,6 +341,22 @@ class Controller:
 		self.smoothingBuffer = self.smoothingBuffer[:self.maxSmoothingBufferSize]
 		return x, y
 
+	def __sendMousePress(self):
+		self.mouse.send_message(
+		  self.mouse.current_virutal_pointer_id,
+		  2,
+		  struct.pack(f"{self.mouse.endianness}III", 0, 0x110, 1)
+		)
+		self.mouse.send_message(self.mouse.current_virtual_pointer_id, 4, b'')  # Frame after press
+
+	def __sendMouseRelease(self):
+		self.mouse.send_message(
+		  self.mouse.current_virutal_pointer_id,
+		  2,
+		  struct.pack(f"{self.mouse.endianness}III", 0, 0x110, 0)
+		)
+		self.mouse.send_message(self.mouse.current_virtual_pointer_id, 4, b'')  # Frame after press
+
 	def __inputLoop(self):
 		previousState = State()
 
@@ -386,21 +404,21 @@ class Controller:
 
 			# presenter mode - press keys
 			if(currentState.btnUp and not previousState.btnUp):
-				pyautogui.press('up')
+				self.keyboard.press('up')
 			elif(currentState.btnDown and not previousState.btnDown):
-				pyautogui.press('down')
+				self.keyboard.press('down')
 			elif(currentState.btnLeft and not previousState.btnLeft):
-				pyautogui.press('left')
+				self.keyboard.press('left')
 			elif(currentState.btnRight and not previousState.btnRight):
-				pyautogui.press('right')
+				self.keyboard.press('right')
 			elif(currentState.btnPlus and not previousState.btnPlus):
-				#pyautogui.press('volumeup') # does not work under Linux
-				m = alsaaudio.Mixer()
-				m.setvolume(m.getvolume()[0] + 2)
+				self.keyboard.press('XF86AudioRaiseVolume') # does not work under Linux
+				# m = alsaaudio.Mixer()
+				# m.setvolume(m.getvolume()[0] + 2)
 			elif(currentState.btnMinus and not previousState.btnMinus):
-				#pyautogui.press('volumedown') # does not work under Linux
-				m = alsaaudio.Mixer()
-				m.setvolume(m.getvolume()[0] - 2)
+				self.keyboard.press('XF86AudioLowerVolume') # does not work under Linux
+				# m = alsaaudio.Mixer()
+				# m.setvolume(m.getvolume()[0] - 2)
 
 			# laserpointer mode - show dot on screen
 			elif(currentState.btnA or currentState.btnB):
@@ -427,12 +445,12 @@ class Controller:
 					x, y = self.warpMatrix.warp(currentState.ir1[0], currentState.ir1[1])
 					# apply smoothing and move mouse
 					self.mouseState.x, self.mouseState.y = self.__smooth(x, y)
-					pyautogui.moveTo(
+					self.mouse.click(
 						min(self.screenWidth-2, max(0, self.mouseState.x)),
 						min(self.screenHeight-2, max(0, self.mouseState.y))
 					)
 					if(not self.mouseState.pressed):
-						pyautogui.mouseDown()
+						self.__sendMousePress()
 						self.mouseState.pressed = True
 
 				elif(self.operationMode == ControllerOperationMode.CALIBRATION
@@ -467,7 +485,7 @@ class Controller:
 				self.mouseState.x = None
 				self.mouseState.y = None
 				if(self.mouseState.pressed):
-					pyautogui.mouseUp()
+					self.__sendMouseRelease()
 					self.mouseState.pressed = False
 
 			previousState = currentState
