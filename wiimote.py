@@ -264,6 +264,11 @@ class Controller:
 		#print('<==', packet.hex())
 		self.dev.write(packet)
 
+	def __sendReportingType(self, reportingType):
+		self.__sendOutputReport(OutputReport.Type,
+			struct.pack('B', InputReport.FLAG_CONTINUOUS) + struct.pack('B', reportingType)
+		)
+
 	def __initMotionPlus(self):
 		self.__writeRegister(Register.MOTIONPLUS_INIT_1, bytes([Register.MOTIONPLUS_INIT_1_VAL]))
 		self.__writeRegister(Register.MOTIONPLUS_INIT_2, bytes([Register.MOTIONPLUS_INIT_2_VAL]))
@@ -376,9 +381,7 @@ class Controller:
 				if(batteryCritical):
 					print('!!! BATTERY CRITICAL', str(batteryLevelPercent)+'%')
 				# re-enable to desired input report
-				self.__sendOutputReport(OutputReport.Type,
-					struct.pack('B', InputReport.FLAG_CONTINUOUS) + struct.pack('B', InputReport.ButtonsAccelIrExtension)
-				)
+				self.__sendReportingType(InputReport.ButtonsAccelIrExtension)
 
 			elif(d[0] == InputReport.ReadData):
 				# todo: reactive MotionPlus (only when inactive; gets inactive sometimes)
