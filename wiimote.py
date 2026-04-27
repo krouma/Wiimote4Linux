@@ -173,6 +173,27 @@ def parseButtonsAccelIrExtensionState(d):
 	s.pitch = d[18] | ((d[21] >> 2) & 0x3f) << 8
 	return s
 
+def parseAcknowledge(d):
+	s = State()
+	s = parseButtons(d, s)
+	if d[4] == 0x00:
+		functionResult = "success"
+	elif d[4] == 0x03:
+		functionResult = "error"
+	elif d[4] == 0x04:
+		functionResult = "unknown (possibly returned by report 0x16, 0x17 or 0x18)"
+	elif d[4] == 0x05:
+		functionResult = "unknown (possibly returned by report 0x12)"
+	elif d[4] == 0x07:
+		functionResult = "no extension"
+	elif d[4] == 0x08:
+		functionResult = "unknown (possibly returned by report 0x16)"
+	else:
+		functionResult = f"unknown function result {d[4]}"
+
+	print(f"Acknowledge output report 0x{d[3]:02x} with result [0x{d[4]:02x}] {functionResult}")
+	return s
+
 class ControllerOperationMode:
 	OFF         = 0
 	CALIBRATION = 1
@@ -387,8 +408,13 @@ class Controller:
 				# todo: reactive MotionPlus (only when inactive; gets inactive sometimes)
 				self.__writeRegister(Register.MOTIONPLUS_INIT_2, bytes([Register.MOTIONPLUS_INIT_2_VAL]))
 				continue
+			elif(d[0] == InputReport.AcknowledgeResult):
+				currentState = parseAcknowledge(d)
 
 			# parse data from supported reports
+			elif(d[0] == InputReport.Buttons):
+				currentState = parseButtons(d)
+				self.__sendReportingType(InputReport.ButtonsAccelIrExtension)
 			elif(d[0] == InputReport.ButtonsAccelIr):
 				currentState = parseButtonsAccelIrState(d)
 			elif(d[0] == InputReport.ButtonsAccelIrExtension):
